@@ -1,0 +1,87 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "Backup Plan template to back up all resources tagged with backup=daily daily at 5am UTC."
+Resources:
+  KMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: "Encryption key for daily"
+      EnableKeyRotation: True
+      Enabled: True
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: Allow
+          Principal:
+            "AWS": { "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:root" }
+          Action:
+          - kms:*
+          Resource: "*"
+          
+  BackupVaultWithDailyBackups:
+    Type: "AWS::Backup::BackupVault"
+    Properties:
+      BackupVaultName: "BackupVaultWithDailyBackups"
+      EncryptionKeyArn: !GetAtt KMSKey.Arn
+
+  BackupPlanWithDailyBackups:
+    Type: "AWS::Backup::BackupPlan"
+    Properties:
+      BackupPlan:
+        BackupPlanName: "BackupPlanWithDailyBackups"
+        BackupPlanRule:
+          -
+            RuleName: "RuleForDailyBackups"
+            TargetBackupVault: !Ref BackupVaultWithDailyBackups
+            ScheduleExpression: "cron(0 5 ? * * *)"
+                          
+    DependsOn: BackupVaultWithDailyBackups
+
+  
+  SQLBackupToS3Role:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+  SQLBackupToS3InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: /
+      Roles:
+        - !Ref SQLBackupToS3Role
+  SQLBackupToS3RolePolicies:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: SQLBackupToS3
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: 
+              - 's3:Get*'
+              - 's3:List*'
+              - 's3:Put*'
+            Resource: 
+              - 'arn:aws:s3:::iacflagstafftestbucket/*'
+      Roles:
+        - !Ref SQLBackupToS3Role
+
+  TagBasedBackupSelection:
+    Type: "AWS::Backup::BackupSelection"
+    Properties:
+      BackupSelection:
+        SelectionName: "TagBasedBackupSelection"
+        IamRoleArn: !GetAtt SQLBackupToS3Role.Arn
+        ListOfTags:
+         -
+           ConditionType: "STRINGEQUALS"
+           ConditionKey: "backup"
+           ConditionValue: "daily"
+      BackupPlanId: !Ref BackupPlanWithDailyBackups
+    DependsOn: BackupPlanWithDailyBackups          
+        
