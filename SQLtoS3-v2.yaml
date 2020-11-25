@@ -33,11 +33,4 @@ Resources:
               - 'arn:aws:s3:::iacflagstafftestbucket/*'
       Roles:
         - !Ref SQLBackupToS3Role
-  myEC2Instance:
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      Tags:
-        - 
-          Key: "backup"
-          Value: "daily"
-      IamInstanceProfile: !Ref SQLBackupToS3InstanceProfile
+  
