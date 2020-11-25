@@ -79,9 +79,6 @@ Resources:
     Properties:
       BackupSelection:
         SelectionName: "TagBasedBackupSelection"
-        ManagedPolicyArns:
-       -
-        "arn:aws:iam::aws:policy/service-role/service role"
         ListOfTags:
          -
            ConditionType: "STRINGEQUALS"
