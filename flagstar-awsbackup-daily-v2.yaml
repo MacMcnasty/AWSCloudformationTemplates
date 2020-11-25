@@ -48,7 +48,10 @@ Resources:
                 - ec2.amazonaws.com
             Action:
               - 'sts:AssumeRole'
-      Path: /
+        ManagedPolicyArns:
+         -
+           "arn:aws:iam::aws:policy/service-role/AWSBackupOrganizationAdminAccess"
+      
   SQLBackupToS3InstanceProfile:
     Type: 'AWS::IAM::InstanceProfile'
     Properties:
@@ -76,7 +79,9 @@ Resources:
     Properties:
       BackupSelection:
         SelectionName: "TagBasedBackupSelection"
-        IamRoleArn: !GetAtt SQLBackupToS3Role.Arn
+        ManagedPolicyArns:
+       -
+        "arn:aws:iam::aws:policy/service-role/service role"
         ListOfTags:
          -
            ConditionType: "STRINGEQUALS"
