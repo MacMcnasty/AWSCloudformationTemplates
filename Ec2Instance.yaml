@@ -1,18 +1,18 @@
 AWSTemplateFormatVersion: 2010-09-09
-Type: AWS::EC2::Instance
-Properties: 
-  AvailabilityZone: us-east-1
-  IamInstanceProfile: SQLBackupToS3Role
-  ImageId: ami-02b5cd5aa444bee23
-  InstanceType: t2.micro
-  KeyName: flagstaffkeypair
-  SecurityGroupIds: 
-    - String
-  SecurityGroups: 
-    - String
-  SubnetId: String
-  Tags: 
-    - Key: backup
-    Value: daily
-  Tenancy: String
+Resources:
+  FSAWSTestInstance:  
+    Type: AWS::EC2::Instance
+    Properties: 
+      AvailabilityZone: us-east-1a
+      IamInstanceProfile: SQLBackupToS3Role
+      ImageId: ami-02b5cd5aa444bee23
+      InstanceType: t2.micro
+      KeyName: flagstaffkeypair
+      SubnetId: subnet-032f626ece7680e37
+      Tags: 
+        - Key: backup
+          Value: daily
+        - Key: Name
+          Value: fs-awstestinstance
+
   
