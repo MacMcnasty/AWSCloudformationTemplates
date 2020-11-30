@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Backup Plan template for thin backups"
+Resources:
+  BackupVaultWithThinBackups:
+    Type: "AWS::Backup::BackupVault"
+    Properties:
+      BackupVaultName: "BackupVaultWithThinBackups"
+
+  BackupPlanWithThinBackups:
+    Type: "AWS::Backup::BackupPlan"
+    Properties:
+      BackupPlan:
+        BackupPlanName: "BackupPlanWithThinBackups"
+        BackupPlanRule:
+          -
+            RuleName: "RuleForDailyBackups"
+            TargetBackupVault: !Ref BackupVaultWithThinBackups
+            ScheduleExpression: "cron(0 5 ? * * *)"
+            Lifecycle:
+              DeleteAfterDays: 7
+          -
+            RuleName: "RuleForWeeklyBackups"
+            TargetBackupVault: !Ref BackupVaultWithThinBackups
+            ScheduleExpression: "cron(0 5 ? * 1 *)"
+            Lifecycle:
+              DeleteAfterDays: 28
+          -
+            RuleName: "RuleForMonthlyBackups"
+            TargetBackupVault: !Ref BackupVaultWithThinBackups
+            ScheduleExpression: "cron(0 5 1 * ? *)"
+            Lifecycle:
+              DeleteAfterDays: 90
+    DependsOn: BackupVaultWithThinBackups
+
+  TagBasedBackupSelection:
+    Type: "AWS::Backup::BackupSelection"
+    Properties:
+      BackupSelection:
+        SelectionName: "TagBasedBackupSelection"
+        IamRoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/service-role/AWSBackupDefaultServiceRole"
+        ListOfTags:
+         -
+           ConditionType: "STRINGEQUALS"
+           ConditionKey: "backup"
+           ConditionValue: "thinbackup"
+      BackupPlanId: !Ref BackupPlanWithThinBackups
+    DependsOn: BackupPlanWithThinBackups          
