@@ -1,0 +1,22 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "Stmt1606859374418",
+        "Action": [
+          "ec2:CreateTags"
+        ],
+        "Effect": "Allow",
+        "Resource": "arn:aws:ec2:*::snapshot/*"
+      },
+      {
+        "Sid": "Stmt1606859497311",
+        "Action": [
+          "ec2:CreateSnapshot",
+          "ec2:DescribeInstances"
+        ],
+        "Effect": "Allow",
+        "Resource": "*"
+      }
+    ]
+  }
