@@ -11,7 +11,7 @@ Resources:
                 - ec2.amazonaws.com
             Action:
               - 'sts:AssumeRole'
-      Path: /
+    Path: /
   SQLBackupToS3InstanceProfile:
     Type: 'AWS::IAM::InstanceProfile'
     Properties:
