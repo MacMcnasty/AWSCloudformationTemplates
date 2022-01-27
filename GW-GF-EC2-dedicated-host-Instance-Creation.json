@@ -1,0 +1,499 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Creates a single EC2 Instance on Dedicated Host",
+    "Metadata": {
+        "RevisionDate": "30-Apr-2021",
+        "AWS::CloudFormation::Designer": {
+            "a3dab467-eabd-4f2c-af22-f6e4555b02d4": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 60,
+                    "y": 90
+                },
+                "z": 1,
+                "embeds": []
+            }
+        }
+    },
+    "Parameters": {
+        "InstanceAmiId": {
+            "Description": "The ID of the AMI to deploy instances with.",
+            "Type": "AWS::EC2::Image::Id",
+            "Default": "ami-0e1ed025c52043650"
+        },
+        "InstanceDetailedMonitoring": {
+            "Description": "Whether to enable detailed monitoring on the instance.",
+            "Type": "String",
+            "Default": "false",
+            "AllowedValues": [
+                "true",
+                "false"
+            ]
+        },
+        "InstanceEBSOptimized": {
+            "Description": "Whether the instance is optimized for Amazon Elastic Block Store I/O.",
+            "Type": "String",
+            "Default": "true",
+            "AllowedValues": [
+                "true",
+                "false"
+            ]
+        },
+        "InstanceProfile": {
+            "Description": "Custom instance profile to be used on the stack.",
+            "Type": "String",
+            "Default": "customer-mc-ec2-instance-profile"
+        },
+        "InstanceAppVolumeIops": {
+            "Description": "The Iops to use for the app volume if volume type is io1, io2 or gp3.",
+            "Type": "Number",
+            "MinValue": 100,
+            "MaxValue": 64000,
+            "Default": 3000
+        },
+        "InstanceAppVolumeName": {
+            "Description": "The name of the root volume to use.",
+            "Type": "String",
+            "Default": "/dev/sdb"
+        },
+        "InstanceAppVolumeSize": {
+            "Description": "The size of the root volume for the instance in GiB.",
+            "Type": "Number",
+            "MinValue": 8,
+            "MaxValue": 16000,
+            "Default": 50
+        },
+        "InstanceAppVolumeType": {
+            "Description": "The type of the root volume for the instance.",
+            "Type": "String",
+            "AllowedValues": [
+                "standard",
+                "io1",
+                "io2",
+                "gp2",
+                "gp3"
+            ],
+            "Default": "gp3"
+        },
+        "InstanceRootVolumeIops": {
+            "Description": "The Iops to use for the root volume if volume type is io1, io2 or gp3.",
+            "Type": "Number",
+            "MinValue": 100,
+            "MaxValue": 64000,
+            "Default": 3000
+        },
+        "InstanceRootVolumeName": {
+            "Description": "The name of the root volume to use.",
+            "Type": "String",
+            "Default": "/dev/sda1"
+        },
+        "InstanceRootVolumeSize": {
+            "Description": "The size of the root volume for the instance in GiB.",
+            "Type": "Number",
+            "MinValue": 8,
+            "MaxValue": 16000,
+            "Default": 70
+        },
+        "InstanceRootVolumeType": {
+            "Description": "The type of the root volume for the instance.",
+            "Type": "String",
+            "AllowedValues": [
+                "standard",
+                "io1",
+                "io2",
+                "gp2",
+                "gp3"
+            ],
+            "Default": "gp3"
+        },
+        "InstancePrivateStaticIp": {
+            "Description": "The static IP address that the instance can support.",
+            "Type": "String",
+            "Default": ""
+        },
+        "InstanceSubnetId": {
+            "Description": "The subnet to deploy instances in this stack to.",
+            "Type": "AWS::EC2::Subnet::Id",
+            "Default": "subnet-0574626e1b6de3dfd"
+        },
+        "InstanceType": {
+            "Description": "The type of EC2 instance to launch.",
+            "Type": "String",
+            "Default": "m4.2xlarge"
+        },
+        "InstanceUserData": {
+            "Description": "Script to be run on boot.",
+            "Type": "String",
+            "Default": ""
+        },
+        "SecurityGroups": {
+            "Description": "Default Security Groups for the instance.",
+            "Type": "CommaDelimitedList",
+            "Default": "sg-0005248a46a9bc520,sg-01937d6c55323d295,sg-0bf96afd563fb56bf"
+        },
+        "DedicatedHostId": {
+            "Description": "The Id of the dedicated host",
+            "Type": "String",
+            "Default": "h-0a5146d3721690e6e"
+        }
+    },
+    "Conditions": {
+        "IsVolumeTypeFitForIops": {
+            "Fn::Or": [
+                {
+                    "Fn::Equals": [
+                        "io1",
+                        {
+                            "Ref": "InstanceRootVolumeType"
+                        }
+                    ]
+                },
+                {
+                    "Fn::Equals": [
+                        "io2",
+                        {
+                            "Ref": "InstanceRootVolumeType"
+                        }
+                    ]
+                },
+                {
+                    "Fn::Equals": [
+                        "gp3",
+                        {
+                            "Ref": "InstanceRootVolumeType"
+                        }
+                    ]
+                }
+            ]
+        },
+        "IsNotDefaultIops": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "InstanceRootVolumeIops"
+                        },
+                        "100"
+                    ]
+                }
+            ]
+        },
+        "HasPrivateStaticIp": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        "",
+                        {
+                            "Ref": "InstancePrivateStaticIp"
+                        }
+                    ]
+                }
+            ]
+        },
+        "HasUserData": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        "",
+                        {
+                            "Ref": "InstanceUserData"
+                        }
+                    ]
+                }
+            ]
+        },
+        "HasDedicatedHost": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        "",
+                        {
+                            "Ref": "DedicatedHostId"
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "Mappings": {
+        "DefaultIopsMap": {
+            "io1": {
+                "default": "100"
+            },
+            "io2": {
+                "default": "100"
+            },
+            "gp3": {
+                "default": "3000"
+            },
+            "gp2": {
+                "default": "0"
+            },
+            "standard": {
+                "default": "0"
+            }
+        }
+    },
+    "Resources": {
+        "Instance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": {
+                            "Ref": "InstanceRootVolumeName"
+                        },
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "Iops": {
+                                "Fn::If": [
+                                    "IsVolumeTypeFitForIops",
+                                    {
+                                        "Fn::If": [
+                                            "IsNotDefaultIops",
+                                            {
+                                                "Ref": "InstanceRootVolumeIops"
+                                            },
+                                            {
+                                                "Fn::FindInMap": [
+                                                    "DefaultIopsMap",
+                                                    {
+                                                        "Ref": "InstanceRootVolumeType"
+                                                    },
+                                                    "default"
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+                            "VolumeSize": {
+                                "Ref": "InstanceRootVolumeSize"
+                            },
+                            "VolumeType": {
+                                "Ref": "InstanceRootVolumeType"
+                            }
+                        }
+                    },
+                    {
+                        "DeviceName": {
+                            "Ref": "InstanceAppVolumeName"
+                        },
+                        "Ebs": {
+                            "DeleteOnTermination": "true",
+                            "Iops": {
+                                "Fn::If": [
+                                    "IsVolumeTypeFitForIops",
+                                    {
+                                        "Fn::If": [
+                                            "IsNotDefaultIops",
+                                            {
+                                                "Ref": "InstanceAppVolumeIops"
+                                            },
+                                            {
+                                                "Fn::FindInMap": [
+                                                    "DefaultIopsMap",
+                                                    {
+                                                        "Ref": "InstanceAppVolumeType"
+                                                    },
+                                                    "default"
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+                            "VolumeSize": {
+                                "Ref": "InstanceAppVolumeSize"
+                            },
+                            "VolumeType": {
+                                "Ref": "InstanceAppVolumeType"
+                            }
+                        }
+                    }
+                ],
+                "EbsOptimized": {
+                    "Ref": "InstanceEBSOptimized"
+                },
+                "IamInstanceProfile": {
+                    "Ref": "InstanceProfile"
+                },
+                "ImageId": {
+                    "Ref": "InstanceAmiId"
+                },
+                "InstanceInitiatedShutdownBehavior": "stop",
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "Monitoring": {
+                    "Ref": "InstanceDetailedMonitoring"
+                },
+                "PrivateIpAddress": {
+                    "Fn::If": [
+                        "HasPrivateStaticIp",
+                        {
+                            "Ref": "InstancePrivateStaticIp"
+                        },
+                        {
+                            "Ref": "AWS::NoValue"
+                        }
+                    ]
+                },
+                "HostId": {
+                    "Fn::If": [
+                        "HasDedicatedHost",
+                        {
+                            "Ref": "DedicatedHostId"
+                        },
+                        {
+                            "Ref": "AWS::NoValue"
+                        }
+                    ]
+                },
+                "SecurityGroupIds": {
+                    "Ref": "SecurityGroups"
+                },
+                "SubnetId": {
+                    "Ref": "InstanceSubnetId"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "USMAGWKARH062-DH"
+                    },
+                    {
+                        "Key": "RecoveryTimeObjective",
+                        "Value": "TBD"
+                    },
+                    {
+                        "Key": "RecoveryPointObjective",
+                        "Value": "TBD"
+                    },
+                    {
+                        "Key": "NotificationEmail",
+                        "Value": "ARXIX_AWS_CW_Notifications@dxc.com"
+                    },
+                    {
+                        "Key": "Patch Group",
+                        "Value": "Unassigned"
+                    },
+                    {
+                        "Key": "Schedule",
+                        "Value": "WeeklyShutdownSchedule"
+                    },
+                    {
+                        "Key": "SchedulerMessage",
+                        "Value": "Started on 2022/01/20 at 13:00 UTC by ams-resource-scheduler"
+                    },
+                    {
+                        "Key": "Database",
+                        "Value": "n/a"
+                    },
+                    {
+                        "Key": "State",
+                        "Value": "ARK"
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": "iC Connections/Services"
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": "prd"
+                    },
+                    {
+                        "Key": "Owner",
+                        "Value": "carey.chrisco@gainwelltechnologies.com///mike.krekeler@gainwelltechnologies.com"
+                    },
+                    {
+                        "Key": "Tier",
+                        "Value": "ARK"
+                    },
+                    {
+                        "Key": "TierLevel",
+                        "Value": "TBD"
+                    },
+                    {
+                        "Key": "DR",
+                        "Value": "TBD"
+                    },
+                    {
+                        "Key": "qualysAgentInstall",
+                        "Value": "TRUE"
+                    },
+                    {
+                        "Key": "nessusAgentInstall",
+                        "Value": "TRUE"
+                    },
+                    {
+                        "Key": "Compliance",
+                        "Value": "TBD"
+                    },
+                    {
+                        "Key": "Backup",
+                        "Value": "TRUE"
+                    },
+                    {
+                        "Key": "MigrationMethod",
+                        "Value": "greenfield"
+                    },
+                    {
+                        "Key": "CostCenter",
+                        "Value": "USEE500934"
+                    }
+                ],
+                "Tenancy": "host",
+                "UserData": {
+                    "Fn::If": [
+                        "HasUserData",
+                        {
+                            "Fn::Base64": {
+                                "Ref": "InstanceUserData"
+                            }
+                        },
+                        {
+                            "Ref": "AWS::NoValue"
+                        }
+                    ]
+                }
+            },
+            "CreationPolicy": {
+                "ResourceSignal": {
+                    "Count": 1,
+                    "Timeout": "PT12H"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "a3dab467-eabd-4f2c-af22-f6e4555b02d4"
+                }
+            }
+        }
+    },
+    "Outputs": {
+        "InstanceId": {
+            "Description": "Instance Id of the newly created instance.",
+            "Value": {
+                "Ref": "Instance"
+            }
+        },
+        "InstancePrivateIP": {
+            "Description": "Private IP address of the new newly created instance.",
+            "Value": {
+                "Fn::GetAtt": [
+                    "Instance",
+                    "PrivateIp"
+                ]
+            }
+        }
+    }
+}
